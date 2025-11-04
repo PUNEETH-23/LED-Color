@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED Color Screen</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s ease;
+            overflow: hidden;
+            background-color: #000000;
+            height: 100vh;
+        }
+
+        .color-picker-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 150px;
+            z-index: 1000;
+        }
+
+        .color-picker-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            transform: translateY(calc(100% - 5px));
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top: 3px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .color-picker-area:hover .color-picker-container {
+            transform: translateY(0);
+        }
+
+        .color-ramp {
+            width: 100%;
+            height: 80px;
+            border-radius: 12px;
+            position: relative;
+            cursor: crosshair;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            background: linear-gradient(to right, 
+                hsl(0, 100%, 50%) 0%,
+                hsl(30, 100%, 50%) 8.33%,
+                hsl(60, 100%, 50%) 16.67%,
+                hsl(90, 100%, 50%) 25%,
+                hsl(120, 100%, 50%) 33.33%,
+                hsl(150, 100%, 50%) 41.67%,
+                hsl(180, 100%, 50%) 50%,
+                hsl(210, 100%, 50%) 58.33%,
+                hsl(240, 100%, 50%) 66.67%,
+                hsl(270, 100%, 50%) 75%,
+                hsl(300, 100%, 50%) 83.33%,
+                hsl(330, 100%, 50%) 91.67%,
+                hsl(360, 100%, 50%) 100%
+            );
+        }
+
+        .color-ramp::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, 
+                rgba(255, 255, 255, 1) 0%,
+                rgba(255, 255, 255, 0) 50%,
+                rgba(0, 0, 0, 0) 50%,
+                rgba(0, 0, 0, 1) 100%
+            );
+            pointer-events: none;
+        }
+
+        .color-indicator {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 3px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .color-indicator::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: currentColor;
+            border-radius: 50%;
+        }
+
+        .hover-hint {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%) translateY(0);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px 12px 0 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+            font-weight: 500;
+        }
+
+        .color-picker-area:hover .hover-hint {
+            opacity: 0;
+            transform: translateX(-50%) translateY(10px);
+        }
+
+        .fullscreen-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.8);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 1001;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(255, 255, 255, 0.9);
+            color: #000;
+            border-color: rgba(255, 255, 255, 0.8);
+            transform: scale(1.05);
+        }
+
+        .current-color-display {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
+            transition: all 0.3s ease;
+            background-color: #000000;
+        }
+
+        .current-color-display:hover {
+            transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        @media (max-width: 768px) {
+            .color-ramp {
+                height: 60px;
+            }
+            
+            .fullscreen-btn {
+                padding: 10px 16px;
+                font-size: 12px;
+            }
+            
+            .current-color-display {
+                width: 50px;
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="current-color-display" id="colorDisplay"></div>
+    
+    <button class="fullscreen-btn" onclick="toggleFullscreen()">
+        <span id="fullscreenIcon">⛶</span>
+        <span id="fullscreenText">Fullscreen</span>
+    </button>
+
+    <div class="color-picker-area">
+        <div class="hover-hint">▲ Hover here to pick a color</div>
+        <div class="color-picker-container">
+            <div class="color-ramp" id="colorRamp">
+                <div class="color-indicator" id="colorIndicator"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const colorRamp = document.getElementById('colorRamp');
+        const colorIndicator = document.getElementById('colorIndicator');
+        const colorDisplay = document.getElementById('colorDisplay');
+        let currentColor = '#000000';
+        let isDragging = false;
+
+        function hslToHex(h, s, l) {
+            l /= 100;
+            const a = s * Math.min(l, 1 - l) / 100;
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
+        }
+
+        function getColorFromPosition(x, y, rect) {
+            // Clamp values to stay within bounds
+            x = Math.max(0, Math.min(x, rect.width));
+            y = Math.max(0, Math.min(y, rect.height));
+            
+            // Calculate hue from horizontal position (0-360)
+            const hue = (x / rect.width) * 360;
+            
+            // Calculate lightness from vertical position
+            // Top = 100% (white), Middle = 50% (pure color), Bottom = 0% (black)
+            const lightness = 100 - (y / rect.height) * 100;
+            
+            const saturation = 100;
+            
+            return hslToHex(hue, saturation, lightness);
+        }
+
+        function updateColor(e) {
+            const rect = colorRamp.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Update indicator position
+            colorIndicator.style.left = `${x}px`;
+            colorIndicator.style.top = `${y}px`;
+            colorIndicator.style.opacity = '1';
+            
+            // Get and set color
+            const color = getColorFromPosition(x, y, rect);
+            colorIndicator.style.color = color;
+            
+            if (isDragging) {
+                currentColor = color;
+                document.body.style.backgroundColor = currentColor;
+                colorDisplay.style.backgroundColor = currentColor;
+            }
+        }
+
+        colorRamp.addEventListener('mouseenter', (e) => {
+            updateColor(e);
+        });
+
+        colorRamp.addEventListener('mousemove', (e) => {
+            updateColor(e);
+        });
+
+        colorRamp.addEventListener('mouseleave', () => {
+            if (!isDragging) {
+                colorIndicator.style.opacity = '0';
+            }
+        });
+
+        colorRamp.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            updateColor(e);
+            const rect = colorRamp.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            currentColor = getColorFromPosition(x, y, rect);
+            document.body.style.backgroundColor = currentColor;
+            colorDisplay.style.backgroundColor = currentColor;
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        colorRamp.addEventListener('click', (e) => {
+            const rect = colorRamp.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            currentColor = getColorFromPosition(x, y, rect);
+            document.body.style.backgroundColor = currentColor;
+            colorDisplay.style.backgroundColor = currentColor;
+        });
+
+        let isFullscreen = false;
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+                isFullscreen = true;
+                document.getElementById('fullscreenText').textContent = 'Exit';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+                isFullscreen = false;
+                document.getElementById('fullscreenText').textContent = 'Fullscreen';
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            isFullscreen = !!document.fullscreenElement;
+            document.getElementById('fullscreenText').textContent = isFullscreen ? 'Exit' : 'Fullscreen';
+        });
+
+        // Set initial color display
+        colorDisplay.style.backgroundColor = currentColor;
+    </script>
+</body>
+</html>
